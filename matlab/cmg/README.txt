@@ -1,6 +1,6 @@
 A. Installation:
 
-Call MakeCMG.m
+call makeCMG.m
 
 
 *********************************************************
@@ -8,10 +8,7 @@ Note:
 MakeCMG adds to the MATLAB path the following directories:
 
 .
-./MATLAB/Hierarchy/Mexfunctions;
-./MATLAB/Hierarchy;
-./MATLAB/solver; 
-./MATLAB;
+./mex
 
 It then saves the path. In shared installations of MATLAB
 the path is not saved for next session. So when you re-run

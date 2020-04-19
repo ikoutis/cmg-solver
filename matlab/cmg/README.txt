@@ -1,6 +1,6 @@
 A. Installation:
 
-call makeCMG.m
+Call MakeCMG.m
 
 
 *********************************************************
@@ -8,7 +8,10 @@ Note:
 MakeCMG adds to the MATLAB path the following directories:
 
 .
-./mex
+./MATLAB/Hierarchy/Mexfunctions;
+./MATLAB/Hierarchy;
+./MATLAB/solver; 
+./MATLAB;
 
 It then saves the path. In shared installations of MATLAB
 the path is not saved for next session. So when you re-run
@@ -32,7 +35,7 @@ negative off-diagonals.
 
 Run one time:
 
->> pfun = cmg_sdd(A); 
+>> pfun = cmg_precondition(A); 
 
 Then for each different b-side, run:
 

@@ -3,7 +3,7 @@
 % input:  A: SDD matrix (positive off-diagonals not supported currently)
 %
 %         opts: optional struct argument with fields   
-%         opts.matlab: if 1 then pfun is slower matlab function, else mex (default mex)
+%         opts.matlab_: if 1 then pfun is slower matlab function, else mex (default mex)
 %
 %
 % output: pfun: preconditioning function for A
@@ -13,7 +13,7 @@
 %
 % For an arbitrary b-side in the null space of A, 
 % the system Ax = b can be solved by:
-%     x = pcg(A, b, tol,iter, pfun);        
+%     x = pcg(A, b, tol,iter, pfun);        t
 %
 % >> help pcg for documentation
 %
@@ -49,7 +49,7 @@
 % process_hierarchy
 % process_sparse_matrix
 
-function [pfun, H, flag] = cmg_precondition(A)
+function [pfun, H, flag] = cmg_precondition(A,opts)
 
     
 
@@ -62,8 +62,9 @@ function [pfun, H, flag] = cmg_precondition(A)
         return
     end
 
+    global matlab_
     try
-        if opts.matlab == 1
+        if opts.matlab_ == 1
             matlab_ = 1;
         else
             matlab_ = 0;
@@ -109,7 +110,7 @@ function [pfun, H, flag] = cmg_precondition(A)
         n = length(A_);
       
         %direct method for small size
-        if (n<500)            
+        if (n<700)            
             H{j}.iterative = 0;
             break
         end
@@ -130,6 +131,8 @@ function [pfun, H, flag] = cmg_precondition(A)
         if nc == 1
             H{j}.islast = 1;
             H{j}.iterative = 1;
+            flag = 1;
+            break;
         end
 
  
@@ -170,19 +173,23 @@ function [pfun, H, flag] = cmg_precondition(A)
     for k=1:(j-2)
        H{k}.repeat = max(floor(nnz(H{k}.A)/nnz(H{k+1}.A)-1),1);
     end
-    H{j-1}.repeat = max(floor(nnz(H{j-1}.A)/nnz(H{j}.chol.ld)-1),1);
+    if j>1
+        H{j-1}.repeat = max(floor(nnz(H{j-1}.A)/nnz(H{j}.chol.ld)-1),1);
+    end
     
     % H = cell2mat(H);
     
     % create precondition function
-    pfun = make_preconditioner(H,matlab_);
+    pfun = make_preconditioner(H);
 
     
 end % function
 
 %% make preconditioner
-function pfun = make_preconditioner(H, matlab_)
+function pfun = make_preconditioner(H)
 
+    global matlab_
+    
     if matlab_  && ~H{1}.sd
         pfun = @(b) preconditioner_(H,b,1);  
         return
@@ -195,13 +202,13 @@ function pfun = make_preconditioner(H, matlab_)
     end
     
     if matlab_  && H{1}.sd
-        pfun = @(b) preconditioner_sd(H,b,matlab_);  
+        pfun = @(b) preconditioner_sd(H,b);  
         return
     end
     
     if ~matlab_  && H{1}.sd
         sH = process_hierarchy(H);
-        pfun = @(b) preconditioner_sd(sH,b,matlab_);  
+        pfun = @(b) preconditioner_sd(sH,b);  
         return
     end
   
@@ -209,7 +216,10 @@ end
 
 
 %% preconditioner_sd
-function x = preconditioner_sd(H,b,matlab_)
+function x = preconditioner_sd(H,b)
+
+    global matlab_
+
     n = length(b);
     b(n+1) = -sum(b);
     if matlab_
@@ -247,9 +257,15 @@ function [cI, nc] = steiner_group(A, dA_)
 
 % input A is Laplacian
 
+    global matlab_
+
     [M, C1] = min(A);      %C1 represents a unimodal forest
      
-    C = split_forest_(C1);
+    if matlab_
+        C = split_forest_(C1);
+    else
+        C = mx_splitforest_(uint32(C1-1))+1;    %+-1 c-indexing
+    end
 
     efd = abs(M'./dA_);
     if min(efd) < (1/8)   %low effective degree nodes found
@@ -322,10 +338,12 @@ function C1 = update_groups_(A, C, dA_)
     B = zeros(n,1);
 
     %B(j) is the total tree weight incident to node j
-    for j=1:n       
-        if C(j)~=j
-            B(j)= A(j,C(j))+B(j);
-            B(C(j)) = A(j,C(j))+B(C(j));
+    for j=1:n    
+        k = C(j);
+        if k ~=j
+            a = A(j,k);
+            B(j)=  a+B(j);
+            B(k) = a+B(k);
         end
     end
 

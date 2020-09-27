@@ -173,8 +173,10 @@ function [pfun, H, flag] = cmg_precondition(A,opts)
     for k=1:(j-2)
        H{k}.repeat = max(floor(nnz(H{k}.A)/nnz(H{k+1}.A)-1),1);
     end
-    if j>1
+    if flag == 0
         H{j-1}.repeat = max(floor(nnz(H{j-1}.A)/nnz(H{j}.chol.ld)-1),1);
+    else
+        H{j-1}.repeat = max(floor(nnz(H{j-1}.A)/nnz(H{j}.A)-1),1);
     end
     
     % H = cell2mat(H);

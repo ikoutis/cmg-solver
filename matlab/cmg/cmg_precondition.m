@@ -4,6 +4,8 @@
 %
 %         opts: optional struct argument with fields   
 %         opts.matlab_: if 1 then pfun is slower matlab function, else mex (default mex)
+%         opts.valiadate : if 0 then A is assumed to be Laplacian, and
+%                          input is not validated (default = 1)
 %
 %
 % output: pfun: preconditioning function for A
@@ -72,21 +74,31 @@ function [pfun, H, flag] = cmg_precondition(A,opts)
     catch
         matlab_ = 0;
     end
-
+    try
+        opts.validate;
+    catch
+        opts.validate = 1;
+    end
 
     %% validate input 
 
-    [A_, flag] = validate_input(A);
-    
-    if flag == 1
-        disp('The input matrix must be symmetric');
-        pfun = [];
-        return
-    elseif flag == 2
-        disp('The current version of CMG does not support positive off-diagonals');
-        pfun = [];
-        return
+    if opts.validate == 1
+        [A_, flag] = validate_input(A);
+        if flag == 1
+            disp('The input matrix must be symmetric');
+            pfun = [];
+            return
+        elseif flag == 2
+            disp('The current version of CMG does not support positive off-diagonals');
+            pfun = [];
+            return
+        end        
+    else
+        flag = 0;
+        A_ = A;
     end
+    
+
     
     S_init = level_init();
     H{1} = S_init;
@@ -229,7 +241,7 @@ function x = preconditioner_sd(H,b)
     else
         x = mx_preconditioner_(H,b);
     end
-    x = x(1:n)+x(n+1); 
+    x = x(1:n)-x(n+1); 
 end
     
 %% initialize hierarchy level
